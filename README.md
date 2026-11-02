@@ -140,6 +140,8 @@ CLI equivalents and settings: [docs/REGISTERING-PROJECTS.md](docs/REGISTERING-PR
 | Linux, macOS | supported by design (POSIX process groups, path handling); CI configured, **not yet run** |
 | WSL | expected to work as Linux; untested |
 
+To check your own machine (macOS or Linux), run `bash scripts/verify-local.sh`. It runs the CI checks plus a dashboard smoke test, offline, and writes a short report. Add `--real` to include one real provider cycle; it asks for your confirmation first.
+
 ## Known limitations
 
 - Real-provider runs have been verified on one machine only (codex-cli 0.166.0 with a ChatGPT login, Claude Code 2.1.316 with a Pro login), using small sample repositories.

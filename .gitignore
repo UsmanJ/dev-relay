@@ -19,3 +19,6 @@ data/
 # Personal notes (e.g. which of your own repos you registered)
 *.local.md
 .claude/settings.local.json
+
+# Local verification reports (scripts/verify-local.sh)
+devrelay-verify-*.txt
