@@ -121,7 +121,7 @@ export function TaskView({ id }: { id: string }) {
             ▶ Resume
           </Button>
         )}
-        {!terminal && task.status !== "paused" && task.status !== "awaiting_merge_approval" && (
+        {!terminal && !["paused", "failed", "awaiting_merge_approval"].includes(task.status) && (
           <Button onClick={() => act("pause")} busy={busy === "pause"}>
             ❚❚ Pause
           </Button>
@@ -142,8 +142,8 @@ export function TaskView({ id }: { id: string }) {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
           {task.status === "spec_review" && task.spec && <SpecApproval task={task} act={act} busy={busy} />}
           {pending.some((a) => a.kind === "execution") && (task.status === "spec_approved" || task.status === "changes_requested") && (
             <ActionCard title="Authorise code changes">

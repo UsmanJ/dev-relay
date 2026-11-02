@@ -21,12 +21,24 @@ First public alpha.
 - Safety: shell-free subprocesses, timeouts, output caps, concurrency limit, process-tree kill, secret redaction, API-key env stripping, localhost/DNS-rebinding/CSRF guards.
 - Docs, ADRs, Apache-2.0 licence, CI (Windows/Linux/macOS).
 
+### Verified before release (2026-11-02, Windows 11, Node 24)
+- `npm run verify` (typecheck, lint, 54 offline tests, production build) passes, both in the working copy and in a fresh `git clone` + `npm ci`.
+- The real dashboard workflow was driven through browser interactions: project registration, Codex spec, approval with execution authorisation, Claude Code implementation, DevRelay test run and diff, Codex review (APPROVED), and the human accept decision.
+- Pause/resume of a running real PM step, and recovery after the server was killed mid-run (the step was marked interrupted, and Retry completed the cycle). No orphaned agent processes were left behind.
+- Isolation across two sample repositories: separate branches, worktrees, tasks and decisions, with each repo's main branch untouched.
+- A Claude-only configuration (Claude Code as PM, developer and reviewer) completed a real cycle.
+
 ### Known limitations
 - Windows 11 is the only platform tested so far. The CI workflow targets Windows, Linux and macOS, but it has not run yet (the repository is not published).
-- The real-provider path has been verified on one machine (codex-cli 0.166.0 with ChatGPT login, Claude Code 2.1.316 with Pro login) against the bundled sample repo only. Larger repositories, long-running tasks and usage-limit messages from real CLIs are untested. Error classification relies on message text.
-- `claude-cli` in read-only roles (PM/reviewer via `--permission-mode plan`) has not been exercised end-to-end.
-- The developer agent can only run allow-listed `git` commands and the configured test command. Builds, installs and other tooling are denied, which can limit what it can verify itself.
-- Background jobs run inside the server or CLI process. Driving the same task from the CLI and the dashboard at the same time is not supported.
+- Real-provider runs were verified on one machine (codex-cli 0.166.0 with a ChatGPT login, Claude Code 2.1.316 with a Pro login) against small sample repositories only. Large repositories, long tasks and real usage-limit responses are untested. Error classification relies on message text.
+- Vendor terms leave open questions for automated use of personal subscriptions by third-party tools. See "Unresolved questions" in docs/PROVIDERS.md.
+- The developer agent can only run allow-listed `git` commands and the configured test command. Builds, installs and other tooling are denied, and `git commit` is sometimes denied, in which case DevRelay reviews the uncommitted changes.
+- Background jobs run inside the server or CLI process. Driving the same task from the CLI and the dashboard at the same time is not supported. If the process is killed, the running step must be retried, and partial edits remain in the worktree.
 - There is no authentication on the local API beyond loopback, header and origin checks.
 - Worktrees and branches are never cleaned up automatically.
 - The single-user, local-only design is intentional: hosting DevRelay for others is unsupported and conflicts with subscription terms.
+
+### Fixed during pre-release validation
+- Task page: a long git-command block caused horizontal page overflow on narrow windows.
+- Task page: a Pause button was shown on failed tasks (pause is not a valid transition from `failed`).
+- `engines.node` raised to `>=20.12` (the CLI uses `process.loadEnvFile`).

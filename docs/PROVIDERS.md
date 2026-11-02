@@ -48,6 +48,18 @@ Hosted or multi-user deployments are **out of scope** for the `own-login` adapte
   - **Our interpretation:** a single developer running DevRelay locally, which spawns *their own* unmodified `claude` binary signed in with *their own* plan, is ordinary individual use. DevRelay never handles tokens. Runs are user-initiated and bounded by revision limits, timeouts and a concurrency cap.
 - **Manual fallback (`claude-manual`):** DevRelay writes `TASK.md` plus a result schema, and shows a command such as `cd "<worktree>"; claude --add-dir "<handoff dir>" "Read …TASK.md and complete the task"`. You run Claude Code interactively, then click **Ingest result**. Use this mode if your plan, employer or jurisdiction calls for a human at the keyboard, or set `DEVRELAY_DISABLE_CLAUDE_CLI=1` to forbid automated runs entirely.
 
+### Unresolved questions for public users
+
+These points are **not explicitly settled** by the vendors' public documents. Decide for yourself, and ask the vendor if it matters to you:
+
+1. **Anthropic Consumer Terms §3(7)** (Free/Pro/Max/Ultra) prohibit accessing the Services "through automated or non-human means, whether through a bot, script, or otherwise", *except* "via an Anthropic API Key or where we otherwise explicitly permit it". The support article above explicitly covers `claude -p` and the Agent SDK on a plan, and Claude Code documents print mode for scripting. We read that as permitting the unmodified Claude Code CLI to be run non-interactively by its own user. Anthropic has **not** said whether this extends to a third-party orchestrator, like DevRelay, deciding when to invoke it. If you want zero ambiguity, use `claude-manual`, or set `DEVRELAY_DISABLE_CLAUDE_CLI=1`.
+2. **"Ordinary, individual usage."** Plan limits assume ordinary individual use. Long unattended chains of tasks may not fit that description. DevRelay keeps runs user-initiated and bounded, but it can't judge your usage pattern for you.
+3. **Team / Enterprise / Education plans** are governed by commercial or organisational agreements and admin policies, not the consumer terms. Check with your administrator.
+4. **Codex with a ChatGPT login.** OpenAI documents `codex exec` (non-interactive mode) with saved ChatGPT auth, while recommending API keys for CI and shared automation. We found no statement on third-party tools invoking `codex exec` locally for the signed-in user. ChatGPT Business/Enterprise workspaces may have their own policies.
+5. **Employer and client policies** on sending source code to AI services apply independently of vendor terms.
+
+DevRelay will not add features that make these questions worse, such as multi-user hosting, shared credentials, or retrying around limits.
+
 ### Not permitted (do not build this on top of DevRelay)
 
 - Hosting DevRelay for other people, so that *their* tasks run on *your* subscription, or the reverse.

@@ -39,6 +39,8 @@ DevRelay runs AI agents against your source code on your own machine. Its main r
 ## Known limitations
 
 - Redaction is pattern-based and best-effort. Don't put secrets in task descriptions.
-- With `claude-cli`, the developer agent can run the allowed `git` subcommands and your configured test command. Your test suite itself runs with your user's permissions.
+- With `claude-cli`, the developer agent can run the allowed `git` subcommands and your configured test command. Your test suite itself runs with your user's permissions. Allow rules are prefix rules (e.g. `Bash(git commit*)`). DevRelay relies on Claude Code's documented handling of shell operators to stop a prefix rule from authorising a chained command such as `git add . && curl …`.
+- `git commit` inside a worktree runs the repository's configured git hooks (e.g. Husky), with your permissions.
+- Codex's read-only sandbox and Claude's plan mode are enforced by those tools, not by DevRelay. DevRelay adds its own independent checks: worktree-only writes, git command filtering, and human merge.
 - Prompt injection from repository content can't be fully prevented. It is mitigated by tool restrictions, read-only roles, worktree isolation and human gates.
 - There is no authentication between local processes: any program running as your OS user can call the local API.
