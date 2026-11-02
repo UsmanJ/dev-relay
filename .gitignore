@@ -1,0 +1,21 @@
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local runtime data: SQLite DB, transcripts, handoff files, worktrees. NEVER commit.
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Secrets
+.env
+.env.*
+!.env.example
+# Personal notes (e.g. which of your own repos you registered)
+*.local.md
+.claude/settings.local.json

@@ -1,0 +1,50 @@
+{
+  "name": "devrelay",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "description": "Local-first, multi-agent software development orchestrator (PM -> developer -> reviewer) driving the AI coding CLIs you already use.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1 -p 3210",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1 -p 3210",
+    "relay": "tsx src/cli/index.ts",
+    "demo": "tsx src/cli/index.ts demo",
+    "doctor": "tsx src/cli/index.ts doctor",
+    "db:generate": "drizzle-kit generate",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build",
+    "smoke:http": "node scripts/smoke-http.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.4",
+    "next": "^16.4.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
+  }
+}
