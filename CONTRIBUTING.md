@@ -17,7 +17,7 @@ npm run verify        # typecheck + lint + tests + production build
 npm run demo          # offline end-to-end run with mock agents
 ```
 
-Tests must not make network or AI requests. Use the `mock` adapter (scenario markers are documented in `src/core/providers/mock.ts`) or `setAgentOverride()`.
+Tests must not make network or AI requests. The vitest config sets `DEVRELAY_OFFLINE=1`, and public CI runs offline only. Never add workflow steps that install, authenticate or call a real provider, and never reference AI-provider secrets in CI. Use the `mock` adapter (scenario markers are documented in `src/core/providers/mock.ts`) or `setAgentOverride()`.
 
 ## Pull requests
 

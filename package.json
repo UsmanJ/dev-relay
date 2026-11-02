@@ -4,14 +4,23 @@
   "private": true,
   "description": "Local-first, multi-agent software development orchestrator (PM -> developer -> reviewer) driving the AI coding CLIs you already use.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UsmanJ/dev-relay.git"
+  },
+  "homepage": "https://github.com/UsmanJ/dev-relay#readme",
+  "bugs": {
+    "url": "https://github.com/UsmanJ/dev-relay/issues"
+  },
+  "keywords": ["ai", "agents", "orchestrator", "codex", "claude-code", "local-first", "developer-tools"],
   "type": "module",
   "engines": {
     "node": ">=20.12"
   },
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 -p 3210",
-    "build": "next build",
-    "start": "next start -H 127.0.0.1 -p 3210",
+    "dev": "node scripts/next.mjs dev -H 127.0.0.1 -p 3210",
+    "build": "node scripts/next.mjs build",
+    "start": "node scripts/next.mjs start -H 127.0.0.1 -p 3210",
     "relay": "tsx src/cli/index.ts",
     "demo": "tsx src/cli/index.ts demo",
     "doctor": "tsx src/cli/index.ts doctor",

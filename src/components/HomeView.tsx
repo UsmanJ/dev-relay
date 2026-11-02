@@ -80,7 +80,7 @@ function ProjectForm({ onCreated }: { onCreated: () => void }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [f, setF] = useState({ name: "", repoPath: "", githubUrl: "", description: "", productGoals: "", constraints: "", instructions: "", devProvider: "claude-cli", pmProvider: "codex", reviewProvider: "codex", testCommand: "", allowTestExecution: false });
+  const [f, setF] = useState({ name: "", repoPath: "", githubUrl: "", description: "", productGoals: "", constraints: "", instructions: "", devProvider: "claude-manual", pmProvider: "codex", reviewProvider: "codex", testCommand: "", allowTestExecution: false });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.type === "checkbox" ? (e.target as HTMLInputElement).checked : e.target.value });
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,8 +145,8 @@ function ProjectForm({ onCreated }: { onCreated: () => void }) {
         </Field>
         <Field label="Developer provider">
           <select className={inputCls} value={f.devProvider} onChange={set("devProvider")}>
-            <option value="claude-cli">claude-cli (automated)</option>
-            <option value="claude-manual">claude-manual (handoff)</option>
+            <option value="claude-manual">claude-manual (handoff, default)</option>
+            <option value="claude-cli">claude-cli (automated, needs opt-in on Providers page)</option>
             <option value="mock">mock</option>
           </select>
         </Field>

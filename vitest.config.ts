@@ -8,5 +8,7 @@ export default defineConfig({
     environment: "node",
     testTimeout: 30000,
     pool: "forks",
+    // Tests must never invoke real provider CLIs.
+    env: { DEVRELAY_OFFLINE: "1", DEVRELAY_DISABLE_CLAUDE_CLI: "1" },
   },
 });

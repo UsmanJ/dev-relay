@@ -1,5 +1,10 @@
 name: CI
 
+# Public CI runs ONLY offline checks with mock providers. It never installs,
+# authenticates or calls Codex, Claude Code or any other AI provider, and it
+# references no secrets. DEVRELAY_OFFLINE=1 makes DevRelay refuse every
+# non-mock provider and skip even provider status checks.
+
 on:
   push:
     branches: [main]
@@ -7,6 +12,11 @@ on:
 
 permissions:
   contents: read
+
+env:
+  DEVRELAY_OFFLINE: "1"
+  DEVRELAY_DISABLE_CLAUDE_CLI: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   verify:
@@ -17,6 +27,7 @@ jobs:
         os: [windows-latest, ubuntu-latest, macos-latest]
         node: [22, 24]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,9 +38,6 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-        env:
-          # Tests use mock providers only; make sure no real CLI could be picked up.
-          DEVRELAY_DISABLE_CLAUDE_CLI: "1"
       - run: npm run build
       - name: Offline demo (mock agents)
         run: npm run demo

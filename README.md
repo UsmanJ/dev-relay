@@ -23,8 +23,8 @@ If you use one AI tool as your PM and another as your developer, you end up copy
 You need **Node.js 22 or 24** and **Git**. The first step needs nothing else: no AI accounts, no API keys.
 
 ```powershell
-git clone <repository-url> devrelay
-cd devrelay
+git clone https://github.com/UsmanJ/dev-relay.git
+cd dev-relay
 npm install
 
 npm run demo            # 1. full PM -> developer -> reviewer cycle with offline mock agents (~5 s)
@@ -42,7 +42,11 @@ codex login                       # choose "Sign in with ChatGPT"
 # Claude Code: install per https://code.claude.com/docs, run `claude` once and sign in, then:
 claude auth status                # expect "authMethod": "claude.ai"
 
-npm run doctor                    # each provider should report "automation allowed: true"
+npm run doctor                    # Codex should report "automation allowed: true"
+
+# Optional: opt in to automated Claude Code runs (default is a manual handoff). Read docs/PROVIDERS.md first.
+npm run relay -- claude-automation enable          # shows what you are confirming
+npm run relay -- claude-automation enable --i-acknowledge
 npm run demo -- --real            # 3. real Codex -> Claude -> Codex cycle on a throwaway sample repo (~1 min)
 ```
 
@@ -88,11 +92,11 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | Adapter | Roles | Runs | Billing |
 |---|---|---|---|
 | `codex` | PM, reviewer | `codex exec --sandbox read-only --output-schema …` | your ChatGPT plan's Codex limits |
-| `claude-cli` | PM, developer, reviewer | `claude -p --restricted --permission-prompts none …` | your Claude plan's limits |
+| `claude-cli` (opt-in) | PM, developer, reviewer | `claude -p --restricted --permission-prompts none …` | your Claude plan's limits |
 | `claude-manual` | developer | you run Claude Code; DevRelay writes `TASK.md` and ingests `RESULT.json` | your Claude plan |
 | `mock` | all | built-in, offline, deterministic | none |
 
-Defaults: Codex as PM and reviewer, automated Claude Code as developer. If you only have Claude, set all three roles to `claude-cli`.
+**Defaults:** Codex as PM and reviewer, and a **manual Claude Code handoff** as developer: DevRelay writes the task file, you run Claude Code yourself, and DevRelay ingests the result. **Automated** Claude Code execution (`claude-cli`) is off until you accept a one-time acknowledgement, on the Providers page or with `npm run relay -- claude-automation enable`. There you confirm that you use your own officially authenticated Claude installation and comply with the applicable terms. The acknowledgement does not override any provider restriction. If you only have Claude, you can use `claude-cli` for all three roles once you have opted in.
 
 **No paid API access is enabled by default.** API-key variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, …) are stripped from every child process. A CLI that reports API-key authentication is refused, and API-metered adapters stay disabled unless you explicitly opt in.
 
@@ -115,7 +119,7 @@ CLI equivalents and settings: [docs/REGISTERING-PROJECTS.md](docs/REGISTERING-PR
 | PM drafts or redrafts the spec | ✅ when you submit a request or send feedback |
 | Spec approval and per-task execution authorisation | 🧑 always you |
 | Worktree and branch creation | ✅ after authorisation (asks first if the main repo is dirty) |
-| Developer implementation | ✅ `claude-cli` · 🧑 `claude-manual` |
+| Developer implementation | 🧑 `claude-manual` (default) · ✅ `claude-cli` after opt-in |
 | Diff capture and test run | ✅ (tests only if you allowed them) |
 | Review and revision loop | ✅ up to *max revisions*, then you |
 | Merge, push, deploy, branch/worktree deletion | ❌ never; you do these yourself |
@@ -142,12 +146,13 @@ Full list: [CHANGELOG.md](CHANGELOG.md).
 
 ## Security
 
-Read-only by default, explicit approvals before writes, isolated worktrees, argv-only subprocesses (no shell), a localhost server with DNS-rebinding and CSRF guards, secret redaction, timeouts, output caps, a concurrency cap, process-tree kill on cancel, and no telemetry. Repository content is treated as untrusted. See [SECURITY.md](SECURITY.md), and report vulnerabilities privately.
+Read-only by default, explicit approvals before writes, isolated worktrees, argv-only subprocesses (no shell), a localhost server with DNS-rebinding and CSRF guards, secret redaction, timeouts, output caps, a concurrency cap, process-tree kill on cancel, and no telemetry (DevRelay sends none, and its npm scripts run Next.js with `NEXT_TELEMETRY_DISABLED=1`). Repository content is treated as untrusted. See [SECURITY.md](SECURITY.md), and report vulnerabilities privately.
 
 ## Development
 
 ```powershell
 npm run verify       # typecheck + lint + tests (offline, mock providers) + production build
+# Public CI (GitHub Actions) runs only these offline checks with DEVRELAY_OFFLINE=1. It never calls Codex or Claude.
 npm run demo         # offline end-to-end run
 ```
 

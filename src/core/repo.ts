@@ -23,8 +23,8 @@ const ArgvSchema = z
 
 export const ProjectSettings = z.object({
   pmProvider: z.string().regex(/^[a-z0-9-]{2,41}$/).default("codex"),
-  /** Provider ids per role (see providers/registry.ts). Defaults: Codex PM/reviewer, automated Claude Code developer; "claude-manual" = human-in-the-loop fallback. */
-  devProvider: z.string().regex(/^[a-z0-9-]{2,41}$/).default("claude-cli"),
+  /** Provider ids per role (see providers/registry.ts). Defaults: Codex PM/reviewer, manual Claude Code handoff as developer; "claude-cli" (automated) requires the one-time acknowledgement. */
+  devProvider: z.string().regex(/^[a-z0-9-]{2,41}$/).default("claude-manual"),
   reviewProvider: z.string().regex(/^[a-z0-9-]{2,41}$/).default("codex"),
   maxRevisions: z.number().int().min(0).max(LIMITS.maxRevisionsCeiling).default(2),
   /** Optional model alias for Claude (e.g. "sonnet"); null = your Claude Code default. */
@@ -401,4 +401,18 @@ export function recentProviderErrors(limit = 10) {
 export function markInterruptedRuns(): number {
   const res = getDb().update(schema.providerRuns).set({ status: "interrupted", error: "Hub process restarted during run", finishedAt: nowIso() }).where(eq(schema.providerRuns.status, "running")).run();
   return res.changes;
+}
+
+/* ------------------------------ Global settings ---------------------------- */
+
+export function getSetting(key: string): string | null {
+  return getDb().select().from(schema.settings).where(eq(schema.settings.key, key)).get()?.value ?? null;
+}
+
+export function setSetting(key: string, value: string): void {
+  getDb().insert(schema.settings).values({ key, value }).onConflictDoUpdate({ target: schema.settings.key, set: { value } }).run();
+}
+
+export function deleteSetting(key: string): void {
+  getDb().delete(schema.settings).where(eq(schema.settings.key, key)).run();
 }

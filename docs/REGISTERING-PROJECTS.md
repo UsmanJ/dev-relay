@@ -44,7 +44,7 @@ npm run relay -- run "My App" "Fix the crash when the profile photo is missing"
 
 | Setting | Default | Notes |
 |---|---|---|
-| `pmProvider` / `devProvider` / `reviewProvider` | `codex` / `claude-cli` / `codex` | any registered adapter that supports the role |
+| `pmProvider` / `devProvider` / `reviewProvider` | `codex` / `claude-manual` / `codex` | any registered adapter that supports the role |
 | `maxRevisions` | 2 | 0–5; the loop stops and asks you after this many rounds |
 | `allowTestExecution` | false | lets DevRelay run `testCommand` in task worktrees |
 | `testCommand` | none | argv, e.g. `npm test`; no shell syntax allowed |

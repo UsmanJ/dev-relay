@@ -12,6 +12,16 @@
 import { CodexAgent, codexStatus } from "./codex";
 import { ClaudeCliAgent, claudeStatus, claudeCliEnabled, detectBillingEnvVars } from "./claude";
 import { MockAgent } from "./mock";
+import { CLAUDE_ACK_REQUIRED_MESSAGE, isClaudeAutomationAcknowledged } from "../claudeAck";
+
+/**
+ * Offline mode (DEVRELAY_OFFLINE=1): only mock and manual providers are usable and
+ * no provider CLI is ever spawned, not even for status checks. Used by CI and tests
+ * so that public pipelines can never make live Codex or Claude calls.
+ */
+export function offlineMode(): boolean {
+  return process.env.DEVRELAY_OFFLINE === "1";
+}
 import type { ProviderDescriptor, ProviderStatus, StructuredAgent, WorkflowRole } from "./types";
 
 type Registry = Map<string, ProviderDescriptor>;
@@ -32,7 +42,7 @@ const BUILTINS: ProviderDescriptor[] = [
   },
   {
     id: "claude-cli",
-    label: "Claude Code CLI (automated, claude -p)",
+    label: "Claude Code CLI (automated, opt-in)",
     kind: "local-cli",
     billing: "own-login",
     roles: ["pm", "developer", "reviewer"],
@@ -71,6 +81,10 @@ function registry(): Registry {
 }
 
 /** Register an additional provider adapter (plugins, future API adapters). */
+export function invalidateProviderStatus(): void {
+  g.__devrelayStatusCache = undefined;
+}
+
 export function registerProvider(desc: ProviderDescriptor): void {
   if (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(desc.id)) throw new Error(`Invalid provider id: ${desc.id}`);
   registry().set(desc.id, desc);
@@ -120,7 +134,9 @@ export async function environmentReport(force = false): Promise<EnvironmentRepor
   if (!force && c && Date.now() - c.at < 60_000) return { providers: c.value, billingEnvVars, checkedAt: new Date(c.at).toISOString() };
   const value = await Promise.all(
     listProviders().map((d) =>
-      d.status().catch((e): ProviderStatus => ({ id: d.id, label: d.label, installed: false, version: null, authenticated: null, authMethod: null, automationAllowed: false, notes: [], error: String((e as Error)?.message ?? e) })),
+      (offlineMode() && d.kind !== "mock"
+        ? Promise.resolve<ProviderStatus>({ id: d.id, label: d.label, installed: false, version: null, authenticated: null, authMethod: null, automationAllowed: d.kind === "manual", notes: ["DEVRELAY_OFFLINE=1: provider CLIs are not invoked."] })
+        : d.status()).catch((e): ProviderStatus => ({ id: d.id, label: d.label, installed: false, version: null, authenticated: null, authMethod: null, automationAllowed: false, notes: [], error: String((e as Error)?.message ?? e) })),
     ),
   );
   const at = Date.now();
@@ -140,12 +156,14 @@ export type Usability = { ok: true } | { ok: false; kind: "auth" | "provider_una
  * (API-key env vars are also stripped from every child process.)
  */
 export async function assertProviderUsable(id: string, role?: WorkflowRole): Promise<Usability> {
-  if (g.__devrelayAgentOverrides?.has(id)) return { ok: true };
+  if (g.__devrelayAgentOverrides?.has(id)) return { ok: true }; // test hook
   const d = getProvider(id);
   if (!d) return { ok: false, kind: "provider_unavailable", message: `Unknown provider: ${id}` };
   if (role && !d.roles.includes(role)) return { ok: false, kind: "permission", message: `${d.label} cannot act as ${role}.` };
   if (d.billing === "api-metered" && process.env.DEVRELAY_ALLOW_METERED_PROVIDERS !== "1") return { ok: false, kind: "permission", message: `${d.label} is an API-metered provider. Metered providers are disabled (set DEVRELAY_ALLOW_METERED_PROVIDERS=1 to opt in).` };
   if (d.kind === "mock" || d.kind === "manual") return { ok: true };
+  if (offlineMode()) return { ok: false, kind: "permission", message: `DEVRELAY_OFFLINE=1: ${d.label} is disabled (only mock and manual providers run offline).` };
+  if (id === "claude-cli" && !isClaudeAutomationAcknowledged()) return { ok: false, kind: "permission", message: CLAUDE_ACK_REQUIRED_MESSAGE };
   const s = (await providerStatuses()).find((x) => x.id === id);
   if (!s || !s.installed) return { ok: false, kind: "provider_unavailable", message: s?.notes.join(" ") || `${id} is not installed.` };
   if (s.authenticated === false) return { ok: false, kind: "auth", message: `${s.label} is not logged in. ${s.notes.join(" ")}` };

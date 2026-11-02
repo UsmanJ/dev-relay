@@ -22,7 +22,7 @@ First public alpha.
 - Docs, ADRs, Apache-2.0 licence, CI (Windows/Linux/macOS).
 
 ### Verified before release (2026-11-02, Windows 11, Node 24)
-- `npm run verify` (typecheck, lint, 54 offline tests, production build) passes, both in the working copy and in a fresh `git clone` + `npm ci`.
+- `npm run verify` (typecheck, lint, offline tests, production build) passes, both in the working copy and in a fresh `git clone` + `npm ci`.
 - The real dashboard workflow was driven through browser interactions: project registration, Codex spec, approval with execution authorisation, Claude Code implementation, DevRelay test run and diff, Codex review (APPROVED), and the human accept decision.
 - Pause/resume of a running real PM step, and recovery after the server was killed mid-run (the step was marked interrupted, and Retry completed the cycle). No orphaned agent processes were left behind.
 - Isolation across two sample repositories: separate branches, worktrees, tasks and decisions, with each repo's main branch untouched.
@@ -37,6 +37,13 @@ First public alpha.
 - There is no authentication on the local API beyond loopback, header and origin checks.
 - Worktrees and branches are never cleaned up automatically.
 - The single-user, local-only design is intentional: hosting DevRelay for others is unsupported and conflicts with subscription terms.
+
+### Changed for public release
+- The default developer provider is now the manual Claude Code handoff (`claude-manual`). Automated `claude-cli` execution requires a one-time, versioned acknowledgement (Providers page or `npm run relay -- claude-automation enable --i-acknowledge`). It is checked in preflight and in the adapter, and it never overrides provider restrictions, `DEVRELAY_DISABLE_CLAUDE_CLI=1` or offline mode.
+- `DEVRELAY_OFFLINE=1` blocks all non-mock providers and skips provider status checks. Set it in CI and in the test suite.
+- Public CI runs offline mock tests only, with no secrets and no provider CLIs.
+- Next.js telemetry is disabled for `npm run dev`, `npm run build` and `npm start` (via `scripts/next.mjs`).
+- Repository metadata points to https://github.com/UsmanJ/dev-relay.
 
 ### Fixed during pre-release validation
 - Task page: a long git-command block caused horizontal page overflow on narrow windows.

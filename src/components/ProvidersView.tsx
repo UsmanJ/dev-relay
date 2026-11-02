@@ -29,6 +29,7 @@ export function ProvidersView() {
         </Button>
       </div>
       <ErrorBanner error={error} onDismiss={() => setError(null)} />
+      <ClaudeAutomationCard onChange={reload} />
       <ProviderPanel status={data} />
       <Card title="Registered adapters">
         <table className="w-full text-left text-sm">
@@ -58,5 +59,73 @@ export function ProvidersView() {
         </p>
       </Card>
     </div>
+  );
+}
+interface AckState {
+  acknowledged: boolean;
+  version: number | null;
+  acknowledgedAt: string | null;
+  currentVersion: number;
+  statements: string[];
+  disabledByEnv: boolean;
+}
+
+/** One-time opt-in for automated Claude Code execution. Manual handoff is the default. */
+function ClaudeAutomationCard({ onChange }: { onChange: () => Promise<void> }) {
+  const ack = useApi<AckState>("/api/settings/claude-automation");
+  const [checked, setChecked] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const post = async (body: Record<string, unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/settings/claude-automation", { body });
+      await ack.reload();
+      await api("/api/status?refresh=1");
+      await onChange();
+      setChecked(false);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const s = ack.data;
+  return (
+    <Card title="Automated Claude Code execution">
+      <ErrorBanner error={error ?? ack.error} onDismiss={() => setError(null)} />
+      {!s ? null : s.acknowledged ? (
+        <div className="space-y-2 text-sm">
+          <p>
+            <b className="text-emerald-600">Enabled</b>: acknowledged {s.acknowledgedAt ? new Date(s.acknowledgedAt).toLocaleString() : ""}. Projects whose developer provider is <code className="mono">claude-cli</code> run <code className="mono">claude -p</code> automatically, using your own Claude Code login.
+          </p>
+          {s.disabledByEnv && <p className="text-amber-700">DEVRELAY_DISABLE_CLAUDE_CLI=1 is set, so automated runs are blocked anyway.</p>}
+          <Button variant="danger" onClick={() => post({ action: "revoke" })} busy={busy}>
+            Disable automated execution
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3 text-sm">
+          <p>
+            <b>Off (default).</b> Developer tasks use the <b>manual handoff</b>: DevRelay writes the task file, and you run Claude Code yourself. You can opt in to automated <code className="mono">claude -p</code> runs once you have confirmed the following:
+          </p>
+          <ol className="list-decimal space-y-1 pl-5">
+            {s.statements.map((t, i) => (
+              <li key={i}>{t}</li>
+            ))}
+          </ol>
+          <p className="text-xs text-zinc-500">This records your confirmation. It does not grant permission beyond Anthropic&apos;s terms, and it does not override any provider restriction. If the terms do not permit your use, keep using the manual handoff.</p>
+          <label className="flex items-start gap-2">
+            <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-1" />
+            <span>I confirm all of the above (acknowledgement v{s.currentVersion}).</span>
+          </label>
+          <Button variant="primary" disabled={!checked || s.disabledByEnv} onClick={() => post({ action: "acknowledge", version: s.currentVersion, confirmed: true })} busy={busy}>
+            Enable automated Claude execution
+          </Button>
+          {s.disabledByEnv && <p className="text-amber-700">DEVRELAY_DISABLE_CLAUDE_CLI=1 is set, so automated runs cannot be enabled.</p>}
+        </div>
+      )}
+    </Card>
   );
 }

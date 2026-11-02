@@ -8,7 +8,7 @@ DevRelay never implements its own login to any AI service. Every provider is a t
 
 | Class | Meaning | Shipped adapters |
 |---|---|---|
-| `own-login` | A local CLI signed in by the user, with usage counted against the user's own plan | `codex`, `claude-cli` |
+| `own-login` | A local CLI signed in by the user, with usage counted against the user's own plan | `codex`, `claude-cli` (opt-in) |
 | `none` | No AI usage, or the human runs the tool | `mock`, `claude-manual` |
 | `api-metered` | Pay-per-use API keys | *none shipped*; blocked unless `DEVRELAY_ALLOW_METERED_PROVIDERS=1` |
 
@@ -31,7 +31,8 @@ Hosted or multi-user deployments are **out of scope** for the `own-login` adapte
 ## Claude Code (`claude-cli`, `claude-manual`)
 
 - **Install:** see <https://code.claude.com/docs>. Run `claude` once and sign in with your Claude account.
-- **Automated mode (`claude-cli`, default developer):**
+- **Default: manual handoff (`claude-manual`).** See below.
+- **Opt-in automated mode (`claude-cli`).** This is off until you accept a one-time, versioned acknowledgement (Providers page, or `npm run relay -- claude-automation enable --i-acknowledge`). You confirm that you use your own Claude Code installation signed in through Anthropic's official login, that you are responsible for complying with the applicable terms, that you understand the open questions below, that you run DevRelay only for yourself, and that runs consume your plan's limits. **The acknowledgement records your confirmation. It does not grant permission beyond Anthropic's terms, and it does not override any provider restriction.** If the text changes, you have to acknowledge again. Revoke it with `claude-automation disable`. Once enabled, DevRelay runs:
   ```
   claude -p --restricted --output-format json --json-schema <schema>
          --permission-mode acceptEdits --permission-prompts none
@@ -46,7 +47,7 @@ Hosted or multi-user deployments are **out of scope** for the `own-login` adapte
   - [Use the Claude Agent SDK with your Claude plan](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan): "when you're signed in with your Claude plan, the Claude Agent SDK and `claude -p` still draw from your subscription limits."
   - [Legal and compliance](https://code.claude.com/docs/en/legal-and-compliance): OAuth is for subscribers' "ordinary use of Claude Code and other native Anthropic applications". Third-party developers may not offer Claude.ai login in their own apps, route requests through Free/Pro/Max/Ultra credentials *on behalf of their users*, or collect or intermediate Claude.ai credentials. This "does not prevent an end user from signing in to the unmodified Claude Code binary with their own Claude subscription". Advertised plan limits "assume ordinary, individual usage of Claude Code and the Agent SDK".
   - **Our interpretation:** a single developer running DevRelay locally, which spawns *their own* unmodified `claude` binary signed in with *their own* plan, is ordinary individual use. DevRelay never handles tokens. Runs are user-initiated and bounded by revision limits, timeouts and a concurrency cap.
-- **Manual fallback (`claude-manual`):** DevRelay writes `TASK.md` plus a result schema, and shows a command such as `cd "<worktree>"; claude --add-dir "<handoff dir>" "Read …TASK.md and complete the task"`. You run Claude Code interactively, then click **Ingest result**. Use this mode if your plan, employer or jurisdiction calls for a human at the keyboard, or set `DEVRELAY_DISABLE_CLAUDE_CLI=1` to forbid automated runs entirely.
+- **Manual handoff (`claude-manual`, default):** DevRelay writes `TASK.md` plus a result schema, and shows a command such as `cd "<worktree>"; claude --add-dir "<handoff dir>" "Read …TASK.md and complete the task"`. You run Claude Code interactively, then click **Ingest result**. Use this mode if your plan, employer or jurisdiction calls for a human at the keyboard, or set `DEVRELAY_DISABLE_CLAUDE_CLI=1` to forbid automated runs entirely.
 
 ### Unresolved questions for public users
 

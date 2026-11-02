@@ -317,7 +317,7 @@ function SettingsTab({ project, reload }: { project: Project; reload: () => Prom
       {msg && <p className="mb-2 text-xs text-emerald-600">{msg}</p>}
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="PM provider">{sel("pmProvider", ["codex", "claude-cli", "mock"])}</Field>
-        <Field label="Developer provider" hint="claude-manual = you run Claude Code yourself (fallback)">{sel("devProvider", ["claude-cli", "claude-manual", "mock"])}</Field>
+        <Field label="Developer provider" hint="claude-manual = you run Claude Code yourself (default). claude-cli = automated; enable it once on the Providers page.">{sel("devProvider", ["claude-manual", "claude-cli", "mock"])}</Field>
         <Field label="Reviewer provider">{sel("reviewProvider", ["codex", "claude-cli", "mock"])}</Field>
         <Field label="Max revision rounds (default for new tasks)" hint="0–5. The reviewer↔developer loop stops here and asks you.">{num("maxRevisions", 0, 5)}</Field>
         <Field label="Provider timeout (minutes)">{num("providerTimeoutMinutes", 1, 60)}</Field>

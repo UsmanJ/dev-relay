@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please **do not** open a public issue for security problems. Use GitHub's private vulnerability reporting (*Security → Report a vulnerability*) on this repository. We aim to acknowledge reports within 7 days. DevRelay is an alpha, volunteer-run project with no bug bounty.
+Please **do not** open a public issue for security problems. Use GitHub's private vulnerability reporting: <https://github.com/UsmanJ/dev-relay/security/advisories/new> (*Security → Report a vulnerability*). We aim to acknowledge reports within 7 days. DevRelay is an alpha, volunteer-run project with no bug bounty.
 
 ## Threat model
 
@@ -29,7 +29,9 @@ DevRelay runs AI agents against your source code on your own machine. Its main r
 - API-key environment variables are stripped from child processes. CLIs reporting API-key auth are blocked from automation.
 - Secrets matching common patterns are redacted from persisted messages, run logs, errors and previews.
 - The database, transcripts, handoff files, worktrees and `.env*` are git-ignored.
-- There is no telemetry, and the Next.js server runs with `poweredByHeader: false`.
+- There is no telemetry. DevRelay sends none, and `npm run dev`, `npm run build` and `npm start` launch Next.js with `NEXT_TELEMETRY_DISABLED=1` (via `scripts/next.mjs`). Running `npx next …` directly bypasses this. The server runs with `poweredByHeader: false`.
+- Automated Claude Code execution is off by default and needs a one-time, versioned acknowledgement. Without it the adapter refuses to run, and `DEVRELAY_DISABLE_CLAUDE_CLI=1` blocks it regardless.
+- `DEVRELAY_OFFLINE=1` (used by CI and the test suite) blocks every non-mock provider and skips provider status checks.
 
 **Local web server**
 - The server binds to `127.0.0.1` only.

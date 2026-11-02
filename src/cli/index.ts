@@ -14,6 +14,7 @@ import { createSampleRepo } from "../core/demo";
 import { STATUS_LABEL } from "../core/state";
 import { HubError } from "../core/util";
 import { closeDb } from "../core/db/client";
+import { acknowledgeClaudeAutomation, claudeAckState, CLAUDE_ACK_VERSION, revokeClaudeAutomation } from "../core/claudeAck";
 
 // Same optional local config files Next.js reads (never committed).
 for (const f of [".env.local", ".env"]) {
@@ -27,8 +28,11 @@ for (const f of [".env.local", ".env"]) {
 const HELP = `DevRelay CLI
 
   doctor                                   Provider install/auth status and billing-risk env vars
+  claude-automation status                 Show whether automated Claude execution is enabled
+  claude-automation enable --i-acknowledge Opt in to automated "claude -p" runs (one-time acknowledgement)
+  claude-automation disable                Revoke it (manual handoff only)
   project add --name N --repo PATH [--github URL] [--description D]
-              [--pm codex|mock] [--dev claude-cli|claude-manual|mock] [--review codex|mock]
+              [--pm codex|claude-cli|mock] [--dev claude-manual|claude-cli|mock] [--review codex|claude-cli|mock]
               [--test-cmd "npm test"] [--allow-tests] [--max-revisions 2]
   project list
   project show <project>
@@ -48,7 +52,8 @@ const HELP = `DevRelay CLI
   task pause|resume|retry|cancel <task>
   run <project> "<request>" [--yes]       Whole cycle. Without --yes it stops at spec approval.
   demo [--real]                           Full cycle on a fresh sample repo. Default: mock agents (offline).
-                                          --real uses Codex (PM/review) + Claude Code (developer) via your subscriptions.
+                                          --real uses Codex (PM/review) + Claude Code (developer) via your own logins;
+                                          requires the claude-automation acknowledgement.
 `;
 
 function out(s = "") {
@@ -107,6 +112,7 @@ async function main() {
       "manual-steps": { type: "boolean" },
       yes: { type: "boolean" },
       real: { type: "boolean" },
+      "i-acknowledge": { type: "boolean" },
     },
   });
 
@@ -129,6 +135,35 @@ async function main() {
       if (r.billingEnvVars.length) out(`⚠ Billing-risk environment variables set: ${r.billingEnvVars.join(", ")}. The hub strips them from every child process, but other tools may use them.`);
       else out("✓ No API-key / pay-as-you-go environment variables detected.");
       return;
+    }
+
+    case "claude-automation": {
+      const action = argv[1] ?? "status";
+      const st = claudeAckState();
+      if (action === "status") {
+        out(st.acknowledged ? `Automated Claude execution: ENABLED (acknowledged ${st.acknowledgedAt}, v${st.version}).` : `Automated Claude execution: DISABLED. Developer tasks use the manual Claude Code handoff.${st.version ? ` (An older acknowledgement v${st.version} exists; the text has changed, so review it again.)` : ""}`);
+        if (process.env.DEVRELAY_DISABLE_CLAUDE_CLI === "1") out("DEVRELAY_DISABLE_CLAUDE_CLI=1 is set: automated runs are blocked regardless.");
+        return;
+      }
+      if (action === "disable") {
+        revokeClaudeAutomation();
+        out("Automated Claude execution disabled. Use developer provider claude-manual.");
+        return;
+      }
+      if (action === "enable") {
+        out(`Before enabling automated Claude Code execution (acknowledgement v${CLAUDE_ACK_VERSION}), confirm that:\n`);
+        st.statements.forEach((s, i) => out(`  ${i + 1}. ${s}`));
+        out("\nThis acknowledgement records YOUR confirmation. It does not override Anthropic's terms or any provider restriction.");
+        if (!values["i-acknowledge"]) {
+          out("\nNot enabled. Re-run with --i-acknowledge if all of the above is true:\n  npm run relay -- claude-automation enable --i-acknowledge");
+          process.exitCode = 1;
+          return;
+        }
+        const s2 = acknowledgeClaudeAutomation(CLAUDE_ACK_VERSION);
+        out(`\nEnabled (${s2.acknowledgedAt}). Set a project's developer provider to claude-cli to use it.`);
+        return;
+      }
+      break;
     }
 
     case "project": {
@@ -249,6 +284,11 @@ async function main() {
 
     case "demo": {
       const real = !!values.real;
+      if (real && !claudeAckState().acknowledged) {
+        out("The real demo runs Claude Code automatically, which needs your one-time acknowledgement first:\n  npm run relay -- claude-automation enable\n(Read docs/PROVIDERS.md. Or use the offline demo: npm run demo)");
+        process.exitCode = 1;
+        return;
+      }
       out(real ? "Creating sample repo for a REAL cycle (Codex PM/review + Claude Code developer, via your subscriptions)…" : "Creating sample repo for an offline MOCK cycle…");
       const repoPath = await createSampleRepo();
       const p = await repo.createProject({

@@ -1,9 +1,13 @@
 /**
  * Claude Code adapters.
  *
- * DEFAULT: "claude-cli" — the hub runs the official, unmodified `claude` binary
- * in print mode (`claude -p`) inside an isolated worktree. Claude Code uses its
- * OWN stored login; the hub never reads, stores or passes any token.
+ * DEFAULT: "claude-manual" — DevRelay writes a task package and YOU run Claude
+ * Code yourself, then ingest the result file.
+ *
+ * OPT-IN: "claude-cli" — DevRelay runs the official, unmodified `claude` binary in
+ * print mode (`claude -p`) inside an isolated worktree. Requires a one-time,
+ * versioned user acknowledgement (see ../claudeAck.ts). Claude Code uses its
+ * OWN stored login; DevRelay never reads, stores or passes any token.
  *
  * Compliance basis (verified 2026-11-02):
  *  - support.claude.com/en/articles/15036540: "when you're signed in with your
@@ -23,14 +27,14 @@
  * `--permission-mode acceptEdits`, `--permission-prompts none` (anything that would
  * prompt is denied), an explicit tool allow-list and NO --dangerously-skip-permissions.
  *
- * FALLBACK: "claude-manual" — the hub writes a task package and you run Claude
- * Code yourself, then ingest the result file. Set DEVRELAY_DISABLE_CLAUDE_CLI=1
- * to forbid automated invocation entirely.
+ * Set DEVRELAY_DISABLE_CLAUDE_CLI=1 to forbid automated invocation entirely,
+ * regardless of the acknowledgement.
  */
 import { resolveCommand, runProcess, subscriptionEnv, type ResolvedCommand } from "../process";
 import { parseStructured, toProviderJsonSchema } from "../schemas";
 import { redact } from "../redact";
 import { classifyProviderError } from "./classify";
+import { CLAUDE_ACK_REQUIRED_MESSAGE, isClaudeAutomationAcknowledged } from "../claudeAck";
 import type { AgentOutcome, AgentRequest, ProviderStatus, StructuredAgent } from "./types";
 
 export function resolveClaude(): ResolvedCommand | null {
@@ -82,6 +86,8 @@ export class ClaudeCliAgent implements StructuredAgent {
     if (!claudeCliEnabled()) {
       return { ok: false, errorKind: "permission", error: "Automated Claude invocation is disabled (DEVRELAY_DISABLE_CLAUDE_CLI=1). Use the manual handoff.", durationMs: 0 };
     }
+    // Defence in depth: never invoke without the user's acknowledgement, even if a caller skipped the preflight.
+    if (!isClaudeAutomationAcknowledged()) return { ok: false, errorKind: "permission", error: CLAUDE_ACK_REQUIRED_MESSAGE, durationMs: 0 };
     const cmd = resolveClaude();
     if (!cmd) return { ok: false, errorKind: "provider_unavailable", error: "Claude Code CLI not found on PATH.", durationMs: 0 };
     const testCommand = Array.isArray(req.meta.testCommand) ? (req.meta.testCommand as string[]) : null;
@@ -165,14 +171,16 @@ export async function claudeStatus(): Promise<ProviderStatus> {
   }
   if (!claudeCliEnabled()) {
     status.notes.push("Automated invocation disabled by DEVRELAY_DISABLE_CLAUDE_CLI=1 — manual handoff only.");
+  } else if (status.authenticated && method === "claude.ai" && !isClaudeAutomationAcknowledged()) {
+    status.notes.push("Signed in with your Claude plan. Automated execution is OFF until you accept the one-time acknowledgement; manual handoff works now.");
   } else if (status.authenticated && method === "claude.ai") {
     status.automationAllowed = true;
-    status.notes.push("Signed in with your Claude plan: automated `claude -p` runs draw from your subscription limits (no API billing).");
+    status.notes.push("Signed in with your Claude plan; automation acknowledged. Automated `claude -p` runs draw from your subscription limits (no API billing).");
   } else if (status.authenticated) {
     status.notes.push(`Auth method "${method}" is not a Claude subscription login. Automation blocked to avoid API charges; run \`claude auth login\` with your Claude account.`);
   } else {
     status.notes.push("Not logged in. Run `claude` and sign in with your Claude plan.");
   }
-  status.notes.push("Fallback: manual handoff (you run Claude Code yourself; the hub ingests the result).");
+  status.notes.push("Manual handoff (default): you run Claude Code yourself; DevRelay ingests the result.");
   return status;
 }
