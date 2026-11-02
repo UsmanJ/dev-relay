@@ -12,7 +12,15 @@
   "bugs": {
     "url": "https://github.com/UsmanJ/dev-relay/issues"
   },
-  "keywords": ["ai", "agents", "orchestrator", "codex", "claude-code", "local-first", "developer-tools"],
+  "keywords": [
+    "ai",
+    "agents",
+    "orchestrator",
+    "codex",
+    "claude-code",
+    "local-first",
+    "developer-tools"
+  ],
   "type": "module",
   "engines": {
     "node": ">=20.12"
@@ -33,7 +41,7 @@
     "smoke:http": "node scripts/smoke-http.mjs"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "12.11.1",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.4",
     "react": "^19.3.1",

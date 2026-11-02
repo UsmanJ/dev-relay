@@ -151,6 +151,15 @@ describe("approvals and safety gates", () => {
     expect(fs.readFileSync(path.join(p.repoPath, "uncommitted.txt"), "utf8")).toBe("wip"); // untouched
   });
 
+  it("accepts a repository root reached through a symlink/junction (canonical path comparison)", async () => {
+    const p = await mockProject();
+    const link = path.join(path.dirname(p.repoPath), `link-${Date.now()}`);
+    fs.symlinkSync(p.repoPath, link, process.platform === "win32" ? "junction" : "dir");
+    const viaLink = await repo.createProject({ name: `linked-${Date.now()}`, repoPath: link, settings: { pmProvider: "mock", devProvider: "mock", reviewProvider: "mock" } });
+    expect(viaLink.repoPath).toBe(link);
+    await expect(repo.createProject({ name: `linked-sub-${Date.now()}`, repoPath: path.join(link, "src") })).rejects.toThrow(/repository root/);
+  });
+
   it("only registers verified git repository roots", async () => {
     const p = await mockProject();
     await expect(repo.createProject({ name: "sub", repoPath: path.join(p.repoPath, "src") })).rejects.toThrow(/repository root/);

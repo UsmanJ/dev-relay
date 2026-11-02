@@ -49,3 +49,6 @@ First public alpha.
 - Task page: a long git-command block caused horizontal page overflow on narrow windows.
 - Task page: a Pause button was shown on failed tasks (pause is not a valid transition from `failed`).
 - `engines.node` raised to `>=20.12` (the CLI uses `process.loadEnvFile`).
+- Pinned `better-sqlite3` to 12.11.1, which has prebuilt binaries for Node 22 and 24 on Windows, Linux and macOS. 13.x made npm 10 (bundled with Node 22) try to compile from source, which fails on machines without C++ build tools. Found by the first CI run.
+- The provider preflight now reports `DEVRELAY_DISABLE_CLAUDE_CLI=1` explicitly, instead of falling through to a status check. Automation was already blocked; only the reason shown was wrong.
+- The Windows `.cmd` shim parser normalises path separators, so it behaves the same on every OS.

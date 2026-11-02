@@ -163,6 +163,7 @@ export async function assertProviderUsable(id: string, role?: WorkflowRole): Pro
   if (d.billing === "api-metered" && process.env.DEVRELAY_ALLOW_METERED_PROVIDERS !== "1") return { ok: false, kind: "permission", message: `${d.label} is an API-metered provider. Metered providers are disabled (set DEVRELAY_ALLOW_METERED_PROVIDERS=1 to opt in).` };
   if (d.kind === "mock" || d.kind === "manual") return { ok: true };
   if (offlineMode()) return { ok: false, kind: "permission", message: `DEVRELAY_OFFLINE=1: ${d.label} is disabled (only mock and manual providers run offline).` };
+  if (id === "claude-cli" && !claudeCliEnabled()) return { ok: false, kind: "permission", message: "Automated Claude invocation is disabled by DEVRELAY_DISABLE_CLAUDE_CLI=1. Use the manual handoff (claude-manual)." };
   if (id === "claude-cli" && !isClaudeAutomationAcknowledged()) return { ok: false, kind: "permission", message: CLAUDE_ACK_REQUIRED_MESSAGE };
   const s = (await providerStatuses()).find((x) => x.id === id);
   if (!s || !s.installed) return { ok: false, kind: "provider_unavailable", message: s?.notes.join(" ") || `${id} is not installed.` };

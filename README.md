@@ -5,7 +5,7 @@
 > **Status: alpha (`v0.1.0-alpha.1`).** Tested on Windows 11. See [Supported platforms](#supported-platforms) and [Known limitations](#known-limitations).
 > DevRelay is an independent open-source project. It is **not** an official OpenAI or Anthropic product, and it is not affiliated with or endorsed by either company.
 
-![Task review: per-criterion verdict from the reviewer](docs/screenshots/03-review-verdict.jpg)
+![DevRelay task page: the PM agent's specification, awaiting your approval](docs/screenshots/02-spec-review.jpg)
 
 ## Why
 
@@ -27,27 +27,31 @@ git clone https://github.com/UsmanJ/dev-relay.git
 cd dev-relay
 npm install
 
-npm run demo            # 1. full PM -> developer -> reviewer cycle with offline mock agents (~5 s)
+npm run demo     # 1. offline PM -> developer -> reviewer cycle (mock agents)
 
 npm run build
-npm start               # 2. open http://127.0.0.1:3210 to see the demo project and its timeline
+npm start        # 2. open http://127.0.0.1:3210
 ```
 
 Then connect the real tools you already use (each person signs in with their own account):
 
 ```powershell
 npm install -g @openai/codex
-codex login                       # choose "Sign in with ChatGPT"
+codex login              # choose "Sign in with ChatGPT"
 
-# Claude Code: install per https://code.claude.com/docs, run `claude` once and sign in, then:
-claude auth status                # expect "authMethod": "claude.ai"
+# Claude Code: install per https://code.claude.com/docs,
+# run `claude` once and sign in, then check:
+claude auth status       # expect "authMethod": "claude.ai"
 
-npm run doctor                    # Codex should report "automation allowed: true"
+npm run doctor           # shows what DevRelay can use
+```
 
-# Optional: opt in to automated Claude Code runs (default is a manual handoff). Read docs/PROVIDERS.md first.
-npm run relay -- claude-automation enable          # shows what you are confirming
+Optionally, opt in to **automated** Claude Code runs (the default is a manual handoff). Read [docs/PROVIDERS.md](docs/PROVIDERS.md) first:
+
+```powershell
+npm run relay -- claude-automation enable    # shows what you confirm
 npm run relay -- claude-automation enable --i-acknowledge
-npm run demo -- --real            # 3. real Codex -> Claude -> Codex cycle on a throwaway sample repo (~1 min)
+npm run demo -- --real   # 3. real Codex -> Claude -> Codex cycle (~1 min)
 ```
 
 The real demo creates a tiny sample library under `data/samples/`. Codex writes the spec, Claude Code implements it on a new branch in an isolated worktree, DevRelay runs the tests itself, and Codex reviews the result. It stops before any merge, and it counts against **your own** plan's usage limits.
@@ -58,27 +62,30 @@ macOS and Linux use the same commands in your usual shell.
 
 | | |
 |---|---|
-| ![Projects and provider status](docs/screenshots/01-projects.jpg) | ![PM specification awaiting approval](docs/screenshots/02-spec-review.jpg) |
-| **Projects & provider status:** each project is a registered local repo | **Spec approval:** edit, redraft with feedback, approve and authorise |
+| ![Projects and provider status](docs/screenshots/01-projects.jpg) | ![Reviewer verdict per acceptance criterion](docs/screenshots/03-review-verdict.jpg) |
+| **Projects & provider status:** each project is a registered local repo | **Review:** verdict per acceptance criterion, based on DevRelay's evidence |
 | ![Captured evidence and diff](docs/screenshots/04-evidence-diff.jpg) | ![Merge decision](docs/screenshots/05-merge-decision.jpg) |
 | **Evidence:** DevRelay's own test run and diff, next to the developer's claims | **Your decision:** DevRelay prints the git commands; you merge |
 
 ## How it works
 
 ```
-                    ┌───────────────────────── DevRelay (one local Node.js process, 127.0.0.1) ─────────────────────────┐
- you ─ request ─►   │  PM adapter ──► TaskSpecification ──► you approve + authorise ──► git worktree (new branch)        │
-                    │  (read-only)        (Zod-validated)                                    │                           │
-                    │                                                                    developer adapter              │
-                    │                                                                    (writes in worktree only)      │
-                    │                                                                         │                         │
-                    │  reviewer adapter ◄── spec + DevRelay-captured diff + DevRelay-run tests ◄┘                        │
-                    │  (read-only)                                                                                      │
-                    │     ├─ APPROVED ────────────► you decide (DevRelay never merges)                                   │
-                    │     ├─ CHANGES_REQUESTED ───► developer again, at most N rounds, then you                          │
-                    │     └─ HUMAN_DECISION ──────► you                                                                  │
-                    │  SQLite: projects · tasks · messages · transitions · approvals · provider runs · decisions        │
-                    └────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ you ── request ──► PM adapter (read-only) ──► TaskSpecification (validated)
+                                                       │
+                 you approve the spec + authorise ◄────┘
+                                │
+                                ▼
+          new branch in an isolated git worktree ──► developer adapter
+                                                       │
+     DevRelay captures the diff and runs your tests ◄──┘
+                                │
+                                ▼
+              reviewer adapter (read-only) judges the evidence
+                ├─ APPROVED ───────────► you decide (DevRelay never merges)
+                ├─ CHANGES_REQUESTED ──► developer again (max N rounds)
+                └─ HUMAN_DECISION ─────► you
+
+ All state in local SQLite · one Node.js process · bound to 127.0.0.1
 ```
 
 - **Engine** (`src/core`): a task state machine with audited transitions, the orchestrator, a job manager (cancellation, concurrency cap, crash recovery), prompt and context assembly, git helpers, and a subprocess runner that never uses a shell.
@@ -151,12 +158,11 @@ Read-only by default, explicit approvals before writes, isolated worktrees, argv
 ## Development
 
 ```powershell
-npm run verify       # typecheck + lint + tests (offline, mock providers) + production build
-# Public CI (GitHub Actions) runs only these offline checks with DEVRELAY_OFFLINE=1. It never calls Codex or Claude.
-npm run demo         # offline end-to-end run
+npm run verify   # typecheck + lint + offline tests + production build
+npm run demo     # offline end-to-end run
 ```
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Public CI (GitHub Actions) runs only these offline checks, with `DEVRELAY_OFFLINE=1`. It never installs or calls Codex or Claude, and it uses no secrets. Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

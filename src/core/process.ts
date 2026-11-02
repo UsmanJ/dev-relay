@@ -69,7 +69,8 @@ export function parseCmdShim(shimPath: string): ResolvedCommand | null {
   const matches = [...text.matchAll(/"%(?:~)?dp0%?\\([^"]+)"/gi)].map((m) => m[1]!).filter((m) => !/node\.exe$/i.test(m));
   const target = matches.at(-1);
   if (!target) return null;
-  const abs = path.resolve(dir, target);
+  // Shim paths use Windows separators; normalise so parsing is deterministic on any OS.
+  const abs = path.resolve(dir, ...target.split(/[\\/]+/));
   if (!fileExists(abs)) return null;
   if (/\.(c|m)?js$/i.test(abs)) return { file: process.execPath, prefixArgs: [abs], displayName: path.basename(shimPath) };
   if (/\.exe$/i.test(abs)) return { file: abs, prefixArgs: [], displayName: path.basename(shimPath) };

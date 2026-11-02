@@ -40,6 +40,19 @@ export function normalizePath(p: string): string {
   return process.platform === "win32" ? resolved.replace(/\//g, "\\").replace(/\\+$/, "").toLowerCase() : resolved.replace(/\/+$/, "");
 }
 
+/**
+ * Canonical path for comparisons: resolves symlinks, junctions, Windows 8.3 short
+ * names (e.g. RUNNER~1) and macOS /var -> /private/var. Falls back to path.resolve
+ * when the path does not exist.
+ */
+export function canonicalPath(p: string): string {
+  try {
+    return normalizePath(fs.realpathSync.native(p));
+  } catch {
+    return normalizePath(p);
+  }
+}
+
 export interface RepoInfo {
   topLevel: string;
   branch: string | null;
@@ -54,7 +67,7 @@ export async function verifyRepo(repoPath: string): Promise<RepoInfo> {
   if (!fs.existsSync(repoPath) || !fs.statSync(repoPath).isDirectory()) throw new HubError(`Directory does not exist: ${repoPath}`, "validation");
   const top = (await git(repoPath, ["rev-parse", "--show-toplevel"])).stdout.trim();
   if (!top) throw new HubError(`Not a Git repository: ${repoPath}`, "validation");
-  if (normalizePath(top) !== normalizePath(repoPath)) {
+  if (canonicalPath(top) !== canonicalPath(repoPath)) {
     throw new HubError(`Path must be the repository root. Root is: ${path.resolve(top)}`, "validation");
   }
   const branchRes = await git(repoPath, ["rev-parse", "--abbrev-ref", "HEAD"]);
@@ -111,8 +124,8 @@ export async function createWorktree(repoPath: string, taskId: string, branch: s
 
 /** Ensure a worktree path is one the hub created (inside data/worktrees). */
 export function assertHubWorktree(p: string): void {
-  const root = normalizePath(worktreesRoot());
-  const np = normalizePath(p);
+  const root = canonicalPath(worktreesRoot());
+  const np = canonicalPath(p);
   if (!np.startsWith(root + (process.platform === "win32" ? "\\" : "/"))) throw new HubError("Worktree path is outside the hub worktrees directory.", "permission");
 }
 
